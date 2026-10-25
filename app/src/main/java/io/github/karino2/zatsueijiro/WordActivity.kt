@@ -64,14 +64,23 @@ class WordActivity : AppCompatActivity() {
 
         if (targetFileName == null) return null
 
+        val matches = mutableListOf<String>()
         try {
             assets.open(targetFileName).use { inputStream ->
                 openDecompressedStream(inputStream).use { decompressedIn ->
                     BufferedReader(InputStreamReader(decompressedIn, Charsets.UTF_8)).use { reader ->
                         var line = reader.readLine()
                         while (line != null) {
-                            if (line.startsWith("■$word") || line.contains("■$word")) {
-                                return line
+                            if (line.startsWith("■")) {
+                                val entryWord = line.substring(1).takeWhile { it != '{' && !it.isWhitespace() }
+                                if (entryWord.equals(word, ignoreCase = true)) {
+                                    val formattedLine = if (line.startsWith("■")) {
+                                        "■" + line.substring(1).replace("■", "\n  ")
+                                    } else {
+                                        line.replace("■", "\n  ")
+                                    }
+                                    matches.add(formattedLine)
+                                }
                             }
                             line = reader.readLine()
                         }
@@ -81,7 +90,8 @@ class WordActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return null
+
+        return if (matches.isNotEmpty()) matches.joinToString("\n") else null
     }
 
     private fun openDecompressedStream(inputStream: InputStream): InputStream {
