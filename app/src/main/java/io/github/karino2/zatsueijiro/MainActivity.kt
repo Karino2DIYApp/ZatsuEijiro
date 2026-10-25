@@ -1,5 +1,6 @@
 package io.github.karino2.zatsueijiro
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.EditText
@@ -56,6 +57,16 @@ class MainActivity : AppCompatActivity() {
                 }
                 val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_list_item_1, matches)
                 listViewCandidates.adapter = adapter
+            }
+        }
+
+        listViewCandidates.setOnItemClickListener { _, _, position, _ ->
+            val selectedWord = listViewCandidates.getItemAtPosition(position) as? String
+            if (selectedWord != null) {
+                val intent = Intent(this, WordActivity::class.java).apply {
+                    putExtra("WORD", selectedWord)
+                }
+                startActivity(intent)
             }
         }
     }
