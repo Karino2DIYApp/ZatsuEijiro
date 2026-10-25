@@ -44,12 +44,19 @@ class WordActivity : AppCompatActivity() {
         return eijiro.lookupEntry(word) { reader ->
             val matches = mutableListOf<String>()
             var line = reader.readLine()
+            matches.add(word)
             while (line != null) {
                 if (line.startsWith("■")) {
                     val entryWord = line.substring(1).substringBefore('{').substringBefore(':').trim()
-                    val isMatch = entryWord.equals(word, ignoreCase = true) ||
-                                  entryWord.startsWith("$word ", ignoreCase = true)
-                    if (isMatch) {
+                    if (entryWord.equals(word, ignoreCase = true)) {
+                        val contentPart = line.substring(1).removePrefix(word).trimStart()
+                        val formatted = if (contentPart.startsWith("■")) {
+                            "■" + contentPart.substring(1).replace("■", "\n  ")
+                        } else {
+                            contentPart.replace("■", "\n  ")
+                        }
+                        matches.add(formatted)
+                    } else if (entryWord.startsWith("$word ", ignoreCase = true)) {
                         val formattedLine = if (line.startsWith("■")) {
                             "■" + line.substring(1).replace("■", "\n  ")
                         } else {
