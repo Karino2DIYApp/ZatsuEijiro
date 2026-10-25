@@ -46,7 +46,7 @@ class WordActivity : AppCompatActivity() {
             var line = reader.readLine()
             while (line != null) {
                 if (line.startsWith("■")) {
-                    val entryWord = line.substring(1).takeWhile { it != '{' && !it.isWhitespace() }
+                    val entryWord = line.substring(1).substringBefore('{').substringBefore(':').trim()
                     if (entryWord.equals(word, ignoreCase = true)) {
                         val formattedLine = if (line.startsWith("■")) {
                             "■" + line.substring(1).replace("■", "\n  ")
