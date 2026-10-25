@@ -15,12 +15,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import net.jpountz.lz4.LZ4BlockInputStream
-import net.jpountz.lz4.LZ4FrameInputStream
-import java.io.BufferedInputStream
-import java.io.BufferedReader
-import java.io.InputStream
-import java.io.InputStreamReader
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,6 +23,7 @@ class MainActivity : AppCompatActivity() {
 
     private val searchScope = CoroutineScope(Dispatchers.Main + Job())
     private var searchJob: Job? = null
+    private val eijiro by lazy { Eijiro(assets) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,62 +67,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun searchCandidates(query: String): List<String> {
-        val maxLen = minOf(query.length, 4)
-        var targetFileName: String? = null
-
-        for (len in maxLen downTo 1) {
-            val prefix = query.substring(0, len)
-            val fileName = "split_index/$prefix.txt.lz4"
-            try {
-                assets.open(fileName).use {
-                    targetFileName = fileName
-                    break
-                }
-            } catch (_: Exception) {
-                // File does not exist, try shorter prefix
-            }
-        }
-
         val matches = mutableListOf<String>()
-        if (targetFileName != null) {
-            try {
-                assets.open(targetFileName).use { inputStream ->
-                    openDecompressedStream(inputStream).use { decompressedIn ->
-                        BufferedReader(InputStreamReader(decompressedIn, Charsets.UTF_8)).use { reader ->
-                            var line = reader.readLine()
-                            while (line != null && matches.size < 500) {
-                                if (line.startsWith(query, ignoreCase = true)) {
-                                    matches.add(line)
-                                }
-                                line = reader.readLine()
-                            }
-                        }
-                    }
+        eijiro.lookupIndex(query) { reader ->
+            var line = reader.readLine()
+            while (line != null && matches.size < 500) {
+                if (line.startsWith(query, ignoreCase = true)) {
+                    matches.add(line)
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+                line = reader.readLine()
             }
         }
         return matches
-    }
-
-    private fun openDecompressedStream(inputStream: InputStream): InputStream {
-        val bufferedInput = BufferedInputStream(inputStream)
-        bufferedInput.mark(4)
-        val header = ByteArray(4)
-        val readCount = bufferedInput.read(header)
-        bufferedInput.reset()
-
-        // LZ4 Frame magic number: 0x184D2204 -> bytes: 0x04, 0x22, 0x4D, 0x18
-        return if (readCount == 4 &&
-            header[0] == 0x04.toByte() &&
-            header[1] == 0x22.toByte() &&
-            header[2] == 0x4D.toByte() &&
-            header[3] == 0x18.toByte()
-        ) {
-            LZ4FrameInputStream(bufferedInput)
-        } else {
-            LZ4BlockInputStream(bufferedInput)
-        }
     }
 }
